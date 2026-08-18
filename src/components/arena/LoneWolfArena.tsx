@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { acceleratedRaycast, computeBoundsTree } from "three-mesh-bvh";
 import { Skull, Volume2, VolumeX, Maximize, Minimize, Settings, PawPrint, Wifi, Eye, Smile } from "lucide-react";
 import { createSpawnFx, type SpawnFx } from "./spawnFx";
 import { createPowerFx } from "./powerFx";
@@ -49,6 +50,11 @@ import {
   getReloadTime,
   type Weapon,
 } from "./weapons";
+
+// The outpost collision clone still contains hundreds of thousands of
+// triangles. Three's default raycaster scans those triangles for every ground
+// and wall probe; the BVH keeps the exact mesh but indexes it spatially.
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 
 
@@ -1834,6 +1840,13 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           const m = o as THREE.Mesh;
           if (m.isMesh && m.geometry) colliders.push(m);
         });
+        const indexedGeometries = new Set<THREE.BufferGeometry>();
+        for (const collider of colliders) {
+          const geometry = collider.geometry;
+          if (indexedGeometries.has(geometry)) continue;
+          indexedGeometries.add(geometry);
+          computeBoundsTree.call(geometry, { maxLeafTris: 16 });
+        }
         collidersRef.current = colliders;
 
         // Radar footprint: sample every vertex of the level between knee and
