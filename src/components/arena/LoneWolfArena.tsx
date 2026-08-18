@@ -2075,6 +2075,10 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       },
     );
 
+    void loadCollision().then(() => {
+      if (!disposed) loadLevel();
+    });
+
     let raf = 0;
     let last = performance.now();
     const forward = new THREE.Vector3();
