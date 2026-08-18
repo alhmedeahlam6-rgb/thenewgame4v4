@@ -23,6 +23,9 @@ export type ArenaMap = {
   scale: number;
   /** vertical shift applied after scaling, so the play surface sits near y = 0 */
   yOffset: number;
+  /** horizontal shift applied after scaling, so the play area is centred on the origin */
+  offsetX: number;
+  offsetZ: number;
   /** true → drop each spawn onto whatever surface is underneath it */
   snapToGround: boolean;
   /** hard barrier box; null = derive a square limit from the model bounds */
@@ -40,6 +43,8 @@ export const ARENA_MAPS: Record<MapId, ArenaMap> = {
     url: "/models/arena.glb",
     scale: 1,
     yOffset: 0,
+    offsetX: 0,
+    offsetZ: 0,
     snapToGround: false,
     bounds: null,
     spawns: [
@@ -56,24 +61,27 @@ export const ARENA_MAPS: Record<MapId, ArenaMap> = {
     tagline: "Open woodland compound. Eight fighters, one fenced outpost.",
     teamSize: 4,
     url: (outpostGlb as { url: string }).url,
-    // authored in millimetre-ish units; this brings the spawn house to human scale
-    scale: 0.00002519,
-    // lifts the spawn house floor to y = 0
-    yOffset: 2.634,
+    // the model is authored at roughly human scale already
+    scale: 1,
+    // the compound sits far from the origin in the source file — these recentre
+    // the playable area and drop the spawn-house floor to y = 0
+    yOffset: -1.05,
+    offsetX: -22.5,
+    offsetZ: -377,
     snapToGround: true,
-    // the fence / cliff barriers at the edge of the level — never passable
-    bounds: { minX: -74, maxX: 74, minZ: -86, maxZ: 66 },
+    // the timber fence ring around the outpost — never passable
+    bounds: { minX: -126, maxX: 122, minZ: -84, maxZ: 61 },
     spawns: [
-      // TEAM 1 — inside the SPWAN_POINT_TEAM1 house
-      { name: "SPAWN_BLUE_1", team: "blue", x: -2.2, y: 0.1, z: -13 },
-      { name: "SPAWN_BLUE_2", team: "blue", x: 2.2, y: 0.1, z: -13 },
-      { name: "SPAWN_BLUE_3", team: "blue", x: -2.2, y: 0.1, z: -6 },
-      { name: "SPAWN_BLUE_4", team: "blue", x: 2.2, y: 0.1, z: -6 },
-      // TEAM 2 — far end of the compound
-      { name: "SPAWN_RED_1", team: "red", x: -9, y: 0.1, z: 54 },
-      { name: "SPAWN_RED_2", team: "red", x: -3, y: 0.1, z: 54 },
-      { name: "SPAWN_RED_3", team: "red", x: 3, y: 0.1, z: 54 },
-      { name: "SPAWN_RED_4", team: "red", x: 9, y: 0.1, z: 54 },
+      // TEAM 1 — inside the SPWAN POINT TEAM1 house (west end)
+      { name: "SPAWN_BLUE_1", team: "blue", x: -114.5, y: 0.2, z: -42 },
+      { name: "SPAWN_BLUE_2", team: "blue", x: -110.5, y: 0.2, z: -42 },
+      { name: "SPAWN_BLUE_3", team: "blue", x: -114.5, y: 0.2, z: -34 },
+      { name: "SPAWN_BLUE_4", team: "blue", x: -110.5, y: 0.2, z: -34 },
+      // TEAM 2 — far east end of the compound
+      { name: "SPAWN_RED_1", team: "red", x: 96, y: 0.2, z: -42 },
+      { name: "SPAWN_RED_2", team: "red", x: 100, y: 0.2, z: -42 },
+      { name: "SPAWN_RED_3", team: "red", x: 96, y: 0.2, z: -34 },
+      { name: "SPAWN_RED_4", team: "red", x: 100, y: 0.2, z: -34 },
     ],
   },
 };
