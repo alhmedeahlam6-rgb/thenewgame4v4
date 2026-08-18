@@ -664,13 +664,21 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       return null;
     };
 
-    const groundAt = (x: number, z: number, fromY: number) => {
+    /**
+     * Highest walkable surface under (x, z).
+     * Anything higher than `fromY + maxRise` is treated as a ceiling / roof
+     * overhead and skipped — otherwise standing inside a shed snaps you onto
+     * its roof and every doorway reads as a wall.
+     */
+    const groundAt = (x: number, z: number, fromY: number, maxRise = STEP_UP + 0.4) => {
       const colliders = collidersRef.current;
       if (colliders.length === 0) return null;
       raycaster.set(scratch.set(x, fromY + 6, z), down);
-      raycaster.far = 40;
+      raycaster.far = 60;
       const hits = raycaster.intersectObjects(colliders, false);
-      return hits.length > 0 && hits[0] ? hits[0].point.y : null;
+      const ceiling = fromY + maxRise;
+      for (const h of hits) if (h.point.y <= ceiling) return h.point.y;
+      return null;
     };
 
     const pushKillFeed = (killer: Fighter, victim: Fighter, weaponName = "Rifle") => {
