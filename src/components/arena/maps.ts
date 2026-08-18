@@ -20,6 +20,12 @@ export type ArenaMap = {
   tagline: string;
   teamSize: number;
   url: string;
+  /**
+   * Optional low-poly, texture-free clone of the level used purely for
+   * raycasts (ground snapping, wall probes, bullets). It is never rendered —
+   * the full-detail model above stays on screen.
+   */
+  collisionUrl?: string;
   /** uniform scale applied to the loaded model (1 = authored scale) */
   scale: number;
   /** vertical shift applied after scaling, so the play surface sits near y = 0 */
