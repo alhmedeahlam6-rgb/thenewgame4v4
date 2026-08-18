@@ -68,6 +68,7 @@ export const ARENA_MAPS: Record<MapId, ArenaMap> = {
     tagline: "Open woodland compound. Eight fighters, one fenced outpost.",
     teamSize: 4,
     url: (outpostGlb as { url: string }).url,
+    collisionUrl: (outpostCollisionGlb as { url: string }).url,
     // the model is authored at roughly human scale already
     scale: 1,
     // the compound sits far from the origin in the source file — these recentre
