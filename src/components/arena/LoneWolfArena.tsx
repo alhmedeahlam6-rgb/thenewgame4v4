@@ -2301,23 +2301,55 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           if (move.lengthSq() > 0) {
             move.normalize().multiplyScalar(speed);
 
-            // wall check from chest height
+            // wall check: sample knee / chest / head so low props and doorway
+            // frames don't read as full walls, and slide along whatever we hit
             if (colliders.length > 0) {
-              const chest = scratch.copy(walkPos).setY(walkPos.y + 1.0);
-              raycaster.set(chest, move.clone().normalize());
-              raycaster.far = PLAYER_RADIUS + speed + 0.05;
-              const hits = raycaster.intersectObjects(colliders, false);
-              if (hits.length > 0 && hits[0]) {
-                const allowed = Math.max(0, hits[0].distance - PLAYER_RADIUS - 0.05);
-                if (allowed < speed) move.normalize().multiplyScalar(allowed);
+              const probe = (dir: THREE.Vector3) => {
+                let best: THREE.Intersection | null = null;
+                for (const h of [0.35, 1.0, 1.6]) {
+                  raycaster.set(scratch.copy(walkPos).setY(walkPos.y + h), dir);
+                  raycaster.far = PLAYER_RADIUS + speed + 0.05;
+                  const hit = raycaster.intersectObjects(colliders, false)[0];
+                  if (hit && (!best || hit.distance < best.distance)) best = hit;
+                }
+                return best;
+              };
+
+              const dir = move.clone().normalize();
+              const hit = probe(dir);
+              if (hit) {
+                const n = hit.face
+                  ? hit.face.normal
+                      .clone()
+                      .transformDirection(hit.object.matrixWorld)
+                      .setY(0)
+                      .normalize()
+                  : dir.clone().negate();
+                if (n.lengthSq() > 0.01) {
+                  // slide: strip the component pushing into the surface
+                  const into = move.dot(n);
+                  if (into < 0) move.addScaledVector(n, -into);
+                  // re-check the slide direction; if still blocked, stop short
+                  if (move.lengthSq() > 1e-6) {
+                    const d2 = move.clone().normalize();
+                    const hit2 = probe(d2);
+                    if (hit2) {
+                      const allowed = Math.max(0, hit2.distance - PLAYER_RADIUS - 0.05);
+                      if (allowed < move.length()) move.setLength(allowed);
+                    }
+                  }
+                } else {
+                  const allowed = Math.max(0, hit.distance - PLAYER_RADIUS - 0.05);
+                  if (allowed < speed) move.setLength(allowed);
+                }
               }
             }
 
             // step check: only small ledges are walkable, taller must be jumped
-            if (grounded && move.lengthSq() > 0) {
+            if (grounded && move.lengthSq() > 1e-6) {
               const nx = walkPos.x + move.x;
               const nz = walkPos.z + move.z;
-              const nextGround = groundAt(nx, nz, walkPos.y);
+              const nextGround = groundAt(nx, nz, walkPos.y, 2.5);
               if (nextGround !== null && nextGround - walkPos.y > STEP_UP) {
                 move.set(0, 0, 0); // blocked — jump over it
               }
