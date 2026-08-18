@@ -1827,8 +1827,10 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         });
         root.add(model);
 
+        // Collide against the simplified proxy when the map ships one, else
+        // fall back to the rendered geometry.
         const colliders: THREE.Mesh[] = [];
-        model.traverse((o) => {
+        (collisionRoot ?? model).traverse((o) => {
           const m = o as THREE.Mesh;
           if (m.isMesh && m.geometry) colliders.push(m);
         });
