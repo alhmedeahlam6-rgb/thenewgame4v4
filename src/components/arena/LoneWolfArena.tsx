@@ -874,7 +874,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       f.respawnIn = 0;
       f.cooldown = 0.8 + Math.random() * 1.2;
       f.pos.copy(f.home.top);
-      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 4);
+      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 0.5, 1.0);
       if (gy !== null) f.pos.y = gy;
       // each fighter gets its own effect, played exactly where it lands
       if (withFx) {
@@ -1106,7 +1106,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       const target = hits[0]
         ? hits[0].point.clone().addScaledVector(dirv, -0.6)
         : eye.clone().addScaledVector(dirv, WALL_RANGE);
-      const gy = groundAt(target.x, target.z, Math.max(target.y, walkPos.y) + 2);
+      const gy = groundAt(target.x, target.z, Math.max(target.y, walkPos.y) + 0.5, 2.5);
       const flat = walkPos.distanceTo(new THREE.Vector3(target.x, walkPos.y, target.z));
       ghostValid = gy !== null && flat <= WALL_RANGE && Math.abs((gy ?? 0) - walkPos.y) < 4;
       ghostSpot.set(target.x, gy ?? walkPos.y, target.z);
@@ -1148,7 +1148,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       const dirv = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
       for (const dist of [3.2, 2.4, 1.8, 4.2]) {
         const c = walkPos.clone().addScaledVector(dirv, dist);
-        const gy = groundAt(c.x, c.z, walkPos.y + 2);
+        const gy = groundAt(c.x, c.z, walkPos.y + 0.5, 1.5);
         if (gy !== null && Math.abs(gy - walkPos.y) < 2.5) {
           return placeWallAt(new THREE.Vector3(c.x, gy, c.z), yaw + Math.PI);
         }
@@ -1860,7 +1860,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         const points: SpawnPoint[] = activeMap.spawns.map((s) => {
           const top = new THREE.Vector3(s.x, s.y, s.z);
           if (activeMap.snapToGround) {
-            const gy = groundAt(s.x, s.z, s.y + 8);
+            const gy = groundAt(s.x, s.z, s.y + 0.5, 1.0);
             if (gy != null) top.y = gy;
           }
           return { name: s.name, team: s.team as Team, top };
@@ -2061,7 +2061,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       }
 
       // keep bots planted on the ground
-      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 2);
+      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 0.5, 1.0);
       if (gy !== null) f.pos.y = gy;
       f.group.position.copy(f.pos);
 
