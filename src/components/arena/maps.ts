@@ -72,17 +72,18 @@ export const ARENA_MAPS: Record<MapId, ArenaMap> = {
     // the timber fence ring around the outpost — never passable
     bounds: { minX: -126, maxX: 122, minZ: -84, maxZ: 61 },
     spawns: [
-      // TEAM 1 — inside the SPWAN POINT TEAM1 house (west end)
-      { name: "SPAWN_BLUE_1", team: "blue", x: -114.5, y: 0.2, z: -42 },
-      { name: "SPAWN_BLUE_2", team: "blue", x: -110.5, y: 0.2, z: -42 },
-      { name: "SPAWN_BLUE_3", team: "blue", x: -114.5, y: 0.2, z: -34 },
-      { name: "SPAWN_BLUE_4", team: "blue", x: -110.5, y: 0.2, z: -34 },
-      // TEAM 2 — far east end of the compound
-      { name: "SPAWN_RED_1", team: "red", x: 96, y: 0.2, z: -42 },
-      { name: "SPAWN_RED_2", team: "red", x: 100, y: 0.2, z: -42 },
-      { name: "SPAWN_RED_3", team: "red", x: 96, y: 0.2, z: -34 },
-      { name: "SPAWN_RED_4", team: "red", x: 100, y: 0.2, z: -34 },
+      // TEAM 1 — on the west spawn pad mesh (world centre -125.38, 0.84, 2.65)
+      { name: "SPAWN_BLUE_1", team: "blue", x: -125.38, y: 0.84, z: -3.35 },
+      { name: "SPAWN_BLUE_2", team: "blue", x: -125.38, y: 0.84, z: 0.65 },
+      { name: "SPAWN_BLUE_3", team: "blue", x: -125.38, y: 0.84, z: 4.65 },
+      { name: "SPAWN_BLUE_4", team: "blue", x: -125.38, y: 0.84, z: 8.65 },
+      // TEAM 2 — on the east spawn pad mesh (world centre 116.92, 0.77, 1.83)
+      { name: "SPAWN_RED_1", team: "red", x: 116.92, y: 0.77, z: -4.17 },
+      { name: "SPAWN_RED_2", team: "red", x: 116.92, y: 0.77, z: -0.17 },
+      { name: "SPAWN_RED_3", team: "red", x: 116.92, y: 0.77, z: 3.83 },
+      { name: "SPAWN_RED_4", team: "red", x: 116.92, y: 0.77, z: 7.83 },
     ],
+
   },
 };
 
