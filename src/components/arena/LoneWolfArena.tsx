@@ -664,13 +664,21 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       return null;
     };
 
-    const groundAt = (x: number, z: number, fromY: number) => {
+    /**
+     * Highest walkable surface under (x, z).
+     * Anything higher than `fromY + maxRise` is treated as a ceiling / roof
+     * overhead and skipped — otherwise standing inside a shed snaps you onto
+     * its roof and every doorway reads as a wall.
+     */
+    const groundAt = (x: number, z: number, fromY: number, maxRise = STEP_UP + 0.4) => {
       const colliders = collidersRef.current;
       if (colliders.length === 0) return null;
       raycaster.set(scratch.set(x, fromY + 6, z), down);
-      raycaster.far = 40;
+      raycaster.far = 60;
       const hits = raycaster.intersectObjects(colliders, false);
-      return hits.length > 0 && hits[0] ? hits[0].point.y : null;
+      const ceiling = fromY + maxRise;
+      for (const h of hits) if (h.point.y <= ceiling) return h.point.y;
+      return null;
     };
 
     const pushKillFeed = (killer: Fighter, victim: Fighter, weaponName = "Rifle") => {
@@ -866,7 +874,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       f.respawnIn = 0;
       f.cooldown = 0.8 + Math.random() * 1.2;
       f.pos.copy(f.home.top);
-      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 4);
+      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 0.5, 1.0);
       if (gy !== null) f.pos.y = gy;
       // each fighter gets its own effect, played exactly where it lands
       if (withFx) {
@@ -1098,7 +1106,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       const target = hits[0]
         ? hits[0].point.clone().addScaledVector(dirv, -0.6)
         : eye.clone().addScaledVector(dirv, WALL_RANGE);
-      const gy = groundAt(target.x, target.z, Math.max(target.y, walkPos.y) + 2);
+      const gy = groundAt(target.x, target.z, Math.max(target.y, walkPos.y) + 0.5, 2.5);
       const flat = walkPos.distanceTo(new THREE.Vector3(target.x, walkPos.y, target.z));
       ghostValid = gy !== null && flat <= WALL_RANGE && Math.abs((gy ?? 0) - walkPos.y) < 4;
       ghostSpot.set(target.x, gy ?? walkPos.y, target.z);
@@ -1140,7 +1148,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       const dirv = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
       for (const dist of [3.2, 2.4, 1.8, 4.2]) {
         const c = walkPos.clone().addScaledVector(dirv, dist);
-        const gy = groundAt(c.x, c.z, walkPos.y + 2);
+        const gy = groundAt(c.x, c.z, walkPos.y + 0.5, 1.5);
         if (gy !== null && Math.abs(gy - walkPos.y) < 2.5) {
           return placeWallAt(new THREE.Vector3(c.x, gy, c.z), yaw + Math.PI);
         }
@@ -1852,7 +1860,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         const points: SpawnPoint[] = activeMap.spawns.map((s) => {
           const top = new THREE.Vector3(s.x, s.y, s.z);
           if (activeMap.snapToGround) {
-            const gy = groundAt(s.x, s.z, s.y + 8);
+            const gy = groundAt(s.x, s.z, s.y + 0.5, 1.0);
             if (gy != null) top.y = gy;
           }
           return { name: s.name, team: s.team as Team, top };
@@ -2053,7 +2061,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
       }
 
       // keep bots planted on the ground
-      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 2);
+      const gy = groundAt(f.pos.x, f.pos.z, f.pos.y + 0.5, 1.0);
       if (gy !== null) f.pos.y = gy;
       f.group.position.copy(f.pos);
 
@@ -2293,23 +2301,55 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           if (move.lengthSq() > 0) {
             move.normalize().multiplyScalar(speed);
 
-            // wall check from chest height
+            // wall check: sample knee / chest / head so low props and doorway
+            // frames don't read as full walls, and slide along whatever we hit
             if (colliders.length > 0) {
-              const chest = scratch.copy(walkPos).setY(walkPos.y + 1.0);
-              raycaster.set(chest, move.clone().normalize());
-              raycaster.far = PLAYER_RADIUS + speed + 0.05;
-              const hits = raycaster.intersectObjects(colliders, false);
-              if (hits.length > 0 && hits[0]) {
-                const allowed = Math.max(0, hits[0].distance - PLAYER_RADIUS - 0.05);
-                if (allowed < speed) move.normalize().multiplyScalar(allowed);
+              const probe = (dir: THREE.Vector3) => {
+                let best: THREE.Intersection | null = null;
+                for (const h of [0.35, 1.0, 1.6]) {
+                  raycaster.set(scratch.copy(walkPos).setY(walkPos.y + h), dir);
+                  raycaster.far = PLAYER_RADIUS + speed + 0.05;
+                  const hit = raycaster.intersectObjects(colliders, false)[0];
+                  if (hit && (!best || hit.distance < best.distance)) best = hit;
+                }
+                return best;
+              };
+
+              const dir = move.clone().normalize();
+              const hit = probe(dir);
+              if (hit) {
+                const n = hit.face
+                  ? hit.face.normal
+                      .clone()
+                      .transformDirection(hit.object.matrixWorld)
+                      .setY(0)
+                      .normalize()
+                  : dir.clone().negate();
+                if (n.lengthSq() > 0.01) {
+                  // slide: strip the component pushing into the surface
+                  const into = move.dot(n);
+                  if (into < 0) move.addScaledVector(n, -into);
+                  // re-check the slide direction; if still blocked, stop short
+                  if (move.lengthSq() > 1e-6) {
+                    const d2 = move.clone().normalize();
+                    const hit2 = probe(d2);
+                    if (hit2) {
+                      const allowed = Math.max(0, hit2.distance - PLAYER_RADIUS - 0.05);
+                      if (allowed < move.length()) move.setLength(allowed);
+                    }
+                  }
+                } else {
+                  const allowed = Math.max(0, hit.distance - PLAYER_RADIUS - 0.05);
+                  if (allowed < speed) move.setLength(allowed);
+                }
               }
             }
 
             // step check: only small ledges are walkable, taller must be jumped
-            if (grounded && move.lengthSq() > 0) {
+            if (grounded && move.lengthSq() > 1e-6) {
               const nx = walkPos.x + move.x;
               const nz = walkPos.z + move.z;
-              const nextGround = groundAt(nx, nz, walkPos.y);
+              const nextGround = groundAt(nx, nz, walkPos.y, 2.5);
               if (nextGround !== null && nextGround - walkPos.y > STEP_UP) {
                 move.set(0, 0, 0); // blocked — jump over it
               }
