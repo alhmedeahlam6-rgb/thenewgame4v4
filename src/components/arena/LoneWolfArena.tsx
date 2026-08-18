@@ -1831,7 +1831,6 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           boundsMinZ = -lim;
           boundsMaxZ = lim;
         }
-        console.log("MAPDBG", activeMap.id, "colliders", collidersRef.current.length, "box", JSON.stringify(box.min), JSON.stringify(box.max));
         if (activeMap.bounds) {
           radius = Math.max(boundsMaxX - boundsMinX, boundsMaxZ - boundsMinZ) * 0.8;
           target.set((boundsMinX + boundsMaxX) / 2, 6, (boundsMinZ + boundsMaxZ) / 2);
