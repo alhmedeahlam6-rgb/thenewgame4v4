@@ -1937,10 +1937,23 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         humanBody.group.visible = false;
         root.add(humanBody.group);
 
+        for (let i = 1; i < activeMap.teamSize; i += 1) addFighter("blue", i, false);
+        for (let i = 0; i < activeMap.teamSize; i += 1) addFighter("red", i, false);
+
         {
+          // one shared cage covering the whole friendly spawn pad, not one box per player
+          const blueHomes = fighters.filter((f) => f.team === "blue").map((f) => f.home.top);
+          const bb = new THREE.Box3();
+          for (const p of blueHomes) bb.expandByPoint(p);
+          bb.expandByScalar(SPAWN_BOX_HALF);
+          const center = bb.getCenter(new THREE.Vector3());
+          center.y = human.home.top.y;
+          const halfX = Math.max(SPAWN_BOX_HALF, (bb.max.x - bb.min.x) / 2);
+          const halfZ = Math.max(SPAWN_BOX_HALF, (bb.max.z - bb.min.z) / 2);
+
           const cage = new THREE.Group();
           const box = new THREE.Mesh(
-            new THREE.BoxGeometry(SPAWN_BOX_HALF * 2, SPAWN_BOX_HEIGHT, SPAWN_BOX_HALF * 2),
+            new THREE.BoxGeometry(halfX * 2, SPAWN_BOX_HEIGHT, halfZ * 2),
             new THREE.MeshBasicMaterial({
               color: 0x3f8fff,
               transparent: true,
@@ -1954,13 +1967,12 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
             new THREE.LineBasicMaterial({ color: 0x9ecbff, transparent: true, opacity: 0.6 }),
           );
           cage.add(box, edges);
-          cage.position.copy(human.home.top).add(new THREE.Vector3(0, SPAWN_BOX_HEIGHT / 2, 0));
+          cage.position.copy(center).add(new THREE.Vector3(0, SPAWN_BOX_HEIGHT / 2, 0));
           cage.visible = false;
           root.add(cage);
-          spawnCageRef.current = { mesh: cage, center: human.home.top.clone() };
+          spawnCageRef.current = { mesh: cage, center, halfX, halfZ };
         }
-        for (let i = 1; i < activeMap.teamSize; i += 1) addFighter("blue", i, false);
-        for (let i = 0; i < activeMap.teamSize; i += 1) addFighter("red", i, false);
+
 
         // the match waits for the player to dismiss the onboarding overlay;
         // enterWalk (the "Enter arena" button) kicks off startMatch.
