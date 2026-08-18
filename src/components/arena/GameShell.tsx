@@ -9,6 +9,8 @@ import { defaultCharacter, loadCharacter, saveCharacter, type ArenaCharacter } f
 import { defaultSettings, loadSettings, saveSettings, type ArenaSettings } from "./settings";
 import { arenaAssets, preloadAll } from "./preload";
 import { initKeyboardLayout } from "./keyboardLayout";
+import MapSelect from "./MapSelect";
+import { type MapId } from "./maps";
 import keyArt from "@/assets/splash-key-art.jpg";
 import lobbyBackdrop from "@/assets/lobby-backdrop.jpg";
 
@@ -45,6 +47,8 @@ export default function GameShell() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [arenaReady, setArenaReady] = useState(false);
   const [tip, setTip] = useState(0);
+  const [mapId, setMapId] = useState<MapId>("frostline");
+  const [mapOpen, setMapOpen] = useState(false);
   const deployStart = useRef(0);
 
   useEffect(() => setSettings(loadSettings()), []);
@@ -79,7 +83,9 @@ export default function GameShell() {
     return () => window.clearTimeout(id);
   }, [phase, arenaReady]);
 
-  const deploy = useCallback(() => {
+  const deploy = useCallback((id: MapId) => {
+    setMapId(id);
+    setMapOpen(false);
     deployStart.current = performance.now();
     setArenaReady(false);
     setPhase("deploy");
@@ -98,7 +104,7 @@ export default function GameShell() {
       {mountArena && (
         <div className={phase === "play" ? "h-full w-full" : "h-full w-full opacity-0"}>
           <Suspense fallback={null}>
-            <LoneWolfArena key={deployStart.current} onReady={() => setArenaReady(true)} onExit={backToLobby} />
+            <LoneWolfArena key={deployStart.current} mapId={mapId} onReady={() => setArenaReady(true)} onExit={backToLobby} />
           </Suspense>
         </div>
       )}
@@ -182,7 +188,7 @@ export default function GameShell() {
           <div className="absolute left-6 top-1/2 hidden w-56 -translate-y-1/2 flex-col gap-3 sm:left-10 sm:flex">
             {[
               { icon: Swords, title: "2v2 Duel", sub: "Live" },
-              { icon: MapIcon, title: "More maps", sub: "Coming soon" },
+              { icon: MapIcon, title: "4v4 Squad", sub: "Live" },
               { icon: Zap, title: "New modes", sub: "Coming soon" },
             ].map(({ icon: Icon, title, sub }) => (
               <div
@@ -229,7 +235,7 @@ export default function GameShell() {
               </button>
               <button
                 type="button"
-                onClick={deploy}
+                onClick={() => setMapOpen(true)}
                 className="group flex h-14 items-center gap-4 rounded-2xl bg-[var(--hud-accent)] pl-8 pr-6 text-[var(--hud-accent-foreground)] shadow-[var(--shadow-hud)] transition hover:brightness-110 active:scale-95"
               >
                 <span className="text-sm font-black uppercase tracking-[0.4em]">Play</span>
@@ -266,6 +272,10 @@ export default function GameShell() {
             </div>
           </div>
         </div>
+      )}
+
+      {mapOpen && phase === "lobby" && (
+        <MapSelect onSelect={deploy} onClose={() => setMapOpen(false)} />
       )}
 
       {settingsOpen && (

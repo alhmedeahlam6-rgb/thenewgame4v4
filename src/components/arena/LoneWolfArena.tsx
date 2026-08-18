@@ -1738,7 +1738,11 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
     };
     window.addEventListener("resize", onResize);
 
-    let limit = 200;
+    const activeMap = ARENA_MAPS[mapIdRef.current];
+    let boundsMinX = activeMap.bounds?.minX ?? -200;
+    let boundsMaxX = activeMap.bounds?.maxX ?? 200;
+    let boundsMinZ = activeMap.bounds?.minZ ?? -200;
+    let boundsMaxZ = activeMap.bounds?.maxZ ?? 200;
     let disposed = false;
 
     // The arena GLB ships meshopt-compressed geometry and KTX2/ETC1S textures,
@@ -1748,10 +1752,13 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
     loader.setKTX2Loader(ktx2Loader);
     loader.setMeshoptDecoder(MeshoptDecoder);
     loader.load(
-      "/models/arena.glb",
+      activeMap.url,
       (gltf) => {
         if (disposed) return;
         const model = gltf.scene;
+        if (activeMap.scale !== 1) model.scale.setScalar(activeMap.scale);
+        model.position.set(activeMap.offsetX, activeMap.yOffset, activeMap.offsetZ);
+        model.updateMatrixWorld(true);
         const maxAniso = renderer.capabilities.getMaxAnisotropy();
         model.traverse((o) => {
           const m = o as THREE.Mesh;
@@ -1789,7 +1796,10 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         // areas into single meshes, so per-mesh bounds are useless here.
         {
           const RES = 128;
-          const EXT = 78;
+          const b = activeMap.bounds;
+          const EXT = b
+            ? Math.max(Math.abs(b.minX), Math.abs(b.maxX), Math.abs(b.minZ), Math.abs(b.maxZ))
+            : 78;
           const cells = new Uint8Array(RES * RES);
           const v = new THREE.Vector3();
           for (const m of colliders) {
@@ -1814,23 +1824,32 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
         box.getSize(size);
-        limit = Math.max(size.x, size.z) / 2 - 2;
-        radius = Math.max(size.x, size.z) * 1.15;
-        target.set(0, size.y * 0.15, 0);
+        if (!activeMap.bounds) {
+          const lim = Math.max(size.x, size.z) / 2 - 2;
+          boundsMinX = -lim;
+          boundsMaxX = lim;
+          boundsMinZ = -lim;
+          boundsMaxZ = lim;
+        }
+        console.log("MAPDBG", activeMap.id, "colliders", collidersRef.current.length, "box", JSON.stringify(box.min), JSON.stringify(box.max));
+        if (activeMap.bounds) {
+          radius = Math.max(boundsMaxX - boundsMinX, boundsMaxZ - boundsMinZ) * 0.8;
+          target.set((boundsMinX + boundsMaxX) / 2, 6, (boundsMinZ + boundsMaxZ) / 2);
+        } else {
+          radius = Math.max(size.x, size.z) * 1.15;
+          target.set(0, size.y * 0.15, 0);
+        }
 
-        // ---- hardcoded spawn spots (from the authored 2v2 spawn meshes) ----
+        // ---- spawn spots come from the active map definition ----
         // one fighter per spot, standing in the middle of its own pad
-        const SPAWN_SPOTS: Array<{ name: string; team: Team; top: THREE.Vector3 }> = [
-          { name: "SPAWN_BLUE_1", team: "blue", top: new THREE.Vector3(-46.78, 0.58, -67.08) },
-          { name: "SPAWN_BLUE_2", team: "blue", top: new THREE.Vector3(-55.04, 0.58, -67.08) },
-          { name: "SPAWN_RED_1", team: "red", top: new THREE.Vector3(45.03, 0.58, 66.05) },
-          { name: "SPAWN_RED_2", team: "red", top: new THREE.Vector3(53.29, 0.58, 66.05) },
-        ];
-        const points: SpawnPoint[] = SPAWN_SPOTS.map((s) => ({
-          name: s.name,
-          team: s.team,
-          top: s.top.clone(),
-        }));
+        const points: SpawnPoint[] = activeMap.spawns.map((s) => {
+          const top = new THREE.Vector3(s.x, s.y, s.z);
+          if (activeMap.snapToGround) {
+            const gy = groundAt(s.x, s.z, s.y + 8);
+            if (gy != null) top.y = gy;
+          }
+          return { name: s.name, team: s.team as Team, top };
+        });
 
         const bluePads = points.filter((p) => p.team === "blue");
         const redPads = points.filter((p) => p.team === "red");
@@ -1906,7 +1925,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           return f;
         };
 
-        // 2v2: you + 1 blue bot vs 2 red bots
+        // you + (teamSize - 1) friendly bots vs teamSize enemy bots
         human = addFighter("blue", 0, true);
         humanBody = buildBot("blue", "YOU");
         humanBody.group.position.copy(human.pos);
@@ -1935,9 +1954,8 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           root.add(cage);
           spawnCageRef.current = { mesh: cage, center: human.home.top.clone() };
         }
-        addFighter("blue", 1, false);
-        addFighter("red", 0, false);
-        addFighter("red", 1, false);
+        for (let i = 1; i < activeMap.teamSize; i += 1) addFighter("blue", i, false);
+        for (let i = 0; i < activeMap.teamSize; i += 1) addFighter("red", i, false);
 
         // the match waits for the player to dismiss the onboarding overlay;
         // enterWalk (the "Enter arena" button) kicks off startMatch.
@@ -2310,8 +2328,8 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
             }
           }
 
-          walkPos.x = Math.max(-limit, Math.min(limit, walkPos.x));
-          walkPos.z = Math.max(-limit, Math.min(limit, walkPos.z));
+          walkPos.x = Math.max(boundsMinX, Math.min(boundsMaxX, walkPos.x));
+          walkPos.z = Math.max(boundsMinZ, Math.min(boundsMaxZ, walkPos.z));
 
           // during the buy phase you are locked inside your spawn cage
           const cage = spawnCageRef.current;
