@@ -6,6 +6,7 @@
  * player can never walk past.
  */
 import outpostGlb from "@/assets/map-outpost.glb.asset.json";
+import outpostCollisionGlb from "@/assets/map-outpost-collision.glb.asset.json";
 
 export type MapId = "frostline" | "outpost";
 export type MapTeam = "blue" | "red";
