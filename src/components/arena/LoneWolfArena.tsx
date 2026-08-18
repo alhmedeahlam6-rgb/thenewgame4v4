@@ -1763,11 +1763,14 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         if (activeMap.scale !== 1) model.scale.setScalar(activeMap.scale);
         model.position.set(activeMap.offsetX, activeMap.yOffset, activeMap.offsetZ);
         model.updateMatrixWorld(true);
-        const maxAniso = renderer.capabilities.getMaxAnisotropy();
+        const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
         model.traverse((o) => {
           const m = o as THREE.Mesh;
           if (m.isMesh) {
-            m.castShadow = true;
+            // The level is static: it only receives shadows. Letting every one
+            // of its ~880k verts cast into the shadow map every frame was the
+            // single biggest source of stutter.
+            m.castShadow = false;
             m.receiveShadow = true;
             // Compressed (KTX2) textures ship without anisotropic filtering, so
             // floors/walls smear at grazing angles — restore crisp sampling.
@@ -1775,6 +1778,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
             for (const mat of mats) {
               const std = mat as THREE.MeshStandardMaterial;
               for (const key of ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap"] as const) {
+
                 const tex = std?.[key] as THREE.Texture | null | undefined;
                 if (tex) {
                   tex.anisotropy = maxAniso;
