@@ -345,7 +345,13 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
   const powerRef = useRef({ active: 0, cooldown: 0, shield: 0 });
   const [powerHud, setPowerHud] = useState({ active: 0, cooldown: 0, shield: 0 });
   const activatePowerRef = useRef<() => void>(() => {});
-  const spawnCageRef = useRef<{ mesh: THREE.Object3D; center: THREE.Vector3 } | null>(null);
+  const spawnCageRef = useRef<{
+    mesh: THREE.Object3D;
+    center: THREE.Vector3;
+    halfX: number;
+    halfZ: number;
+  } | null>(null);
+
   const saveSentRef = useRef(false);
   const introRef = useRef(0);
   const ammoRef = useRef<Record<string, { mag: number; reserve: number }>>({
