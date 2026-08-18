@@ -1763,7 +1763,34 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
     const loader = new GLTFLoader();
     loader.setKTX2Loader(ktx2Loader);
     loader.setMeshoptDecoder(MeshoptDecoder);
-    loader.load(
+    /**
+     * Optional collision proxy: a simplified, texture-free clone of the level.
+     * It is never added to the scene (so nothing extra is drawn) but it is
+     * transformed exactly like the visual model, so raycasts against it line
+     * up with what the player sees — at a fraction of the triangle count.
+     */
+    let collisionRoot: THREE.Object3D | null = null;
+    const loadCollision = () =>
+      new Promise<void>((resolve) => {
+        if (!activeMap.collisionUrl) return resolve();
+        const cl = new GLTFLoader();
+        cl.setMeshoptDecoder(MeshoptDecoder);
+        cl.load(
+          activeMap.collisionUrl,
+          (g) => {
+            const proxy = g.scene;
+            if (activeMap.scale !== 1) proxy.scale.setScalar(activeMap.scale);
+            proxy.position.set(activeMap.offsetX, activeMap.yOffset, activeMap.offsetZ);
+            proxy.updateMatrixWorld(true);
+            collisionRoot = proxy;
+            resolve();
+          },
+          undefined,
+          () => resolve(),
+        );
+      });
+
+    const loadLevel = () => loader.load(
       activeMap.url,
       (gltf) => {
         if (disposed) return;
@@ -1800,8 +1827,10 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         });
         root.add(model);
 
+        // Collide against the simplified proxy when the map ships one, else
+        // fall back to the rendered geometry.
         const colliders: THREE.Mesh[] = [];
-        model.traverse((o) => {
+        (collisionRoot ?? model).traverse((o) => {
           const m = o as THREE.Mesh;
           if (m.isMesh && m.geometry) colliders.push(m);
         });
@@ -2045,6 +2074,10 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         setStatus("Failed to load the map file.");
       },
     );
+
+    void loadCollision().then(() => {
+      if (!disposed) loadLevel();
+    });
 
     let raf = 0;
     let last = performance.now();

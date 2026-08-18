@@ -6,6 +6,7 @@
  * player can never walk past.
  */
 import outpostGlb from "@/assets/map-outpost.glb.asset.json";
+import outpostCollisionGlb from "@/assets/map-outpost-collision.glb.asset.json";
 
 export type MapId = "frostline" | "outpost";
 export type MapTeam = "blue" | "red";
@@ -19,6 +20,12 @@ export type ArenaMap = {
   tagline: string;
   teamSize: number;
   url: string;
+  /**
+   * Optional low-poly, texture-free clone of the level used purely for
+   * raycasts (ground snapping, wall probes, bullets). It is never rendered —
+   * the full-detail model above stays on screen.
+   */
+  collisionUrl?: string;
   /** uniform scale applied to the loaded model (1 = authored scale) */
   scale: number;
   /** vertical shift applied after scaling, so the play surface sits near y = 0 */
@@ -61,6 +68,7 @@ export const ARENA_MAPS: Record<MapId, ArenaMap> = {
     tagline: "Open woodland compound. Eight fighters, one fenced outpost.",
     teamSize: 4,
     url: (outpostGlb as { url: string }).url,
+    collisionUrl: (outpostCollisionGlb as { url: string }).url,
     // the model is authored at roughly human scale already
     scale: 1,
     // the compound sits far from the origin in the source file — these recentre
