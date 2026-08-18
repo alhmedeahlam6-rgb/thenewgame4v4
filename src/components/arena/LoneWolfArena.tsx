@@ -2349,8 +2349,9 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
           // during the buy phase you are locked inside your spawn cage
           const cage = spawnCageRef.current;
           if (matchRef.current.phase === "countdown" && cage) {
-            walkPos.x = Math.max(cage.center.x - SPAWN_BOX_HALF, Math.min(cage.center.x + SPAWN_BOX_HALF, walkPos.x));
-            walkPos.z = Math.max(cage.center.z - SPAWN_BOX_HALF, Math.min(cage.center.z + SPAWN_BOX_HALF, walkPos.z));
+            walkPos.x = Math.max(cage.center.x - cage.halfX, Math.min(cage.center.x + cage.halfX, walkPos.x));
+            walkPos.z = Math.max(cage.center.z - cage.halfZ, Math.min(cage.center.z + cage.halfZ, walkPos.z));
+
             const ceil = cage.center.y + SPAWN_BOX_HEIGHT - eyeHeight();
             if (walkPos.y > ceil) {
               walkPos.y = ceil;
