@@ -878,10 +878,8 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline" }: 
         f.group.position.copy(f.pos);
       }
       if (f.isHuman) {
-        if (spawnCageRef.current) {
-          spawnCageRef.current.center.copy(f.pos);
-          spawnCageRef.current.mesh.position.copy(f.pos).add(new THREE.Vector3(0, SPAWN_BOX_HEIGHT / 2, 0));
-        }
+        // the cage is a fixed team-wide box, so it stays where it was built
+
         walkPos.copy(f.pos);
         velY = 0;
         grounded = true;
